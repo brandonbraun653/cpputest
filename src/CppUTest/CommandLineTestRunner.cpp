@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "CppUTest/CppUTestConfig.h"
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/CommandLineTestRunner.h"
 #include "CppUTest/TestOutput.h"
@@ -43,19 +44,24 @@ int CommandLineTestRunner::RunAllTests(int ac, const char *const *av)
     int result = 0;
     ConsoleTestOutput backupOutput;
 
+#if CPPUTEST_USE_MEM_LEAK_DETECTION
     MemoryLeakWarningPlugin memLeakWarn(DEF_PLUGIN_MEM_LEAK);
     memLeakWarn.destroyGlobalDetectorAndTurnOffMemoryLeakDetectionInDestructor(true);
     TestRegistry::getCurrentRegistry()->installPlugin(&memLeakWarn);
+#endif
 
     {
         CommandLineTestRunner runner(ac, av, TestRegistry::getCurrentRegistry());
         result = runner.runAllTestsMain();
     }
 
+#if CPPUTEST_USE_MEM_LEAK_DETECTION
     if (result == 0) {
         backupOutput << memLeakWarn.FinalReport(0);
     }
     TestRegistry::getCurrentRegistry()->removePluginByName(DEF_PLUGIN_MEM_LEAK);
+#endif
+
     return result;
 }
 

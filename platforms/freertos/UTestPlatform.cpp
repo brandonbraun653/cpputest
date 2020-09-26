@@ -17,10 +17,24 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <CppUTest/TestHarness.h>
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+
+/* STL Includes */
+#include <array>
 
 /* CppUTest Includes */
 #include <CppUTest/PlatformSpecificFunctions.h>
-#include <CppUTest/TestHarness.h>
+
+/* Chimera Includes */
+#include <Chimera/serial>
+
+/* FreeRTOS Includes */
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/portable.h>
 
 
 static jmp_buf test_exit_jmp_buf[ 10 ];
@@ -50,6 +64,14 @@ void ( *PlatformSpecificRunTestInASeperateProcess )( UtestShell *shell, TestPlug
                                                      TestResult *result ) = DummyPlatformSpecificRunTestInASeperateProcess;
 int ( *PlatformSpecificFork )( void )                                     = DummyPlatformSpecificFork;
 int ( *PlatformSpecificWaitPid )( int, int *, int )                       = DummyPlatformSpecificWaitPid;
+
+
+#if !defined( WIN32 ) && !defined( WIN64 )
+void *operator new(unsigned int x , char const* file, unsigned int line)
+{
+  return pvPortMalloc( x );
+}
+#endif /* !WIN32 && !WIN64 */
 
 extern "C"
 {
@@ -108,7 +130,7 @@ extern "C"
 
   static PlatformSpecificFile PlatformSpecificFOpenImplementation( const char *filename, const char *flag )
   {
-    return fopen( filename, flag );
+    return nullptr;
   }
 
   static void PlatformSpecificFPutsImplementation( const char *str, PlatformSpecificFile file )
@@ -119,20 +141,90 @@ extern "C"
   {
   }
 
-  static void PlatformSpecificFlushImplementation()
-  {
-  }
 
   PlatformSpecificFile ( *PlatformSpecificFOpen )( const char *, const char * ) = PlatformSpecificFOpenImplementation;
   void ( *PlatformSpecificFPuts )( const char *, PlatformSpecificFile )         = PlatformSpecificFPutsImplementation;
   void ( *PlatformSpecificFClose )( PlatformSpecificFile )                      = PlatformSpecificFCloseImplementation;
 
-  int ( *PlatformSpecificPutchar )( int ) = putchar;
+
+  /*-------------------------------------------------------------------------------
+  Output Stream Stubs
+  -------------------------------------------------------------------------------*/
+  static std::array<uint8_t, 256> ostreamBuff;
+  static size_t ostreamBuffIdx = 0;
+
+  static int PlatformSpecificPutCharImplementation( int x )
+  {
+    /*-------------------------------------------------
+    Reset the buffer if we try to write into or past
+    the null terminator.
+    -------------------------------------------------*/
+    if ( ostreamBuffIdx >= ( ostreamBuff.size() - 1 ) )
+    {
+      ostreamBuff.fill( 0 );
+      ostreamBuffIdx = 0;
+    }
+
+    /*-------------------------------------------------
+    Store the new character
+    -------------------------------------------------*/
+    ostreamBuff[ ostreamBuffIdx ] = static_cast<uint8_t>( x );
+    ostreamBuffIdx++;
+
+    return x;
+  }
+
+  static void PlatformSpecificFlushImplementation()
+  {
+    auto serial = Chimera::Serial::getDriver( Chimera::Serial::Channel::SERIAL1 );
+
+    /*-------------------------------------------------
+    Dump the data to the serial console
+    -------------------------------------------------*/
+    serial->lock();
+    serial->write( ostreamBuff.data(), ostreamBuffIdx );
+    serial->await( Chimera::Event::Trigger::TRIGGER_WRITE_COMPLETE, Chimera::Threading::TIMEOUT_BLOCK );
+    serial->unlock();
+
+    /*-------------------------------------------------
+    Reset the buffer
+    -------------------------------------------------*/
+    ostreamBuff.fill( 0 );
+    ostreamBuffIdx = 0;
+  }
+
+  int ( *PlatformSpecificPutchar )( int ) = PlatformSpecificPutCharImplementation;
   void ( *PlatformSpecificFlush )()       = PlatformSpecificFlushImplementation;
 
-  void *( *PlatformSpecificMalloc )( size_t size )                  = malloc;
-  void *( *PlatformSpecificRealloc )( void *, size_t )              = realloc;
-  void ( *PlatformSpecificFree )( void *memory )                    = free;
+
+  /*-------------------------------------------------------------------------------
+  Memory Stubs
+  -------------------------------------------------------------------------------*/
+  static volatile size_t memAllocated = 0;
+  static volatile size_t memReallocated = 0;
+
+  static void *PlatformSpecificMallocImplementation( size_t size )
+  {
+    memAllocated += size;
+    return pvPortMalloc( size );
+  }
+
+  static void *PlatformSpecificReallocImplementation( void *mem, size_t size)
+  {
+    memReallocated += size;
+    vPortFree( mem );
+    return pvPortMalloc( size );
+  }
+
+  static void PlatformSpecificFreeImplementation( void *mem )
+  {
+    vPortFree( mem );
+  }
+
+
+  void *( *PlatformSpecificMalloc )( size_t size )                  = PlatformSpecificMallocImplementation;
+  void *( *PlatformSpecificRealloc )( void *, size_t )              = PlatformSpecificReallocImplementation;
+  void ( *PlatformSpecificFree )( void *memory )                    = PlatformSpecificFreeImplementation;
   void *( *PlatformSpecificMemCpy )( void *, const void *, size_t ) = memcpy;
   void *( *PlatformSpecificMemset )( void *, int, size_t )          = memset;
 
