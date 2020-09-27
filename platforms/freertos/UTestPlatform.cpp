@@ -30,16 +30,23 @@
 #include <CppUTest/PlatformSpecificFunctions.h>
 
 /* Chimera Includes */
+#include <Chimera/common>
 #include <Chimera/serial>
 
 /* FreeRTOS Includes */
 #include <FreeRTOS/FreeRTOS.h>
 #include <FreeRTOS/portable.h>
 
-
+/*-------------------------------------------------------------------------------
+Static Data
+-------------------------------------------------------------------------------*/
 static jmp_buf test_exit_jmp_buf[ 10 ];
 static int jmp_buf_index = 0;
 
+
+/*-------------------------------------------------------------------------------
+Process Hooks
+-------------------------------------------------------------------------------*/
 TestOutput::WorkingEnvironment PlatformSpecificGetWorkingEnvironment()
 {
   return TestOutput::eclipse;
@@ -65,16 +72,20 @@ void ( *PlatformSpecificRunTestInASeperateProcess )( UtestShell *shell, TestPlug
 int ( *PlatformSpecificFork )( void )                                     = DummyPlatformSpecificFork;
 int ( *PlatformSpecificWaitPid )( int, int *, int )                       = DummyPlatformSpecificWaitPid;
 
-
-#if !defined( WIN32 ) && !defined( WIN64 )
-void *operator new(unsigned int x , char const* file, unsigned int line)
+/*-------------------------------------------------------------------------------
+C++ Memory Overloads
+-------------------------------------------------------------------------------*/
+// For some reason this one is needed for test creation. It's a bit odd.
+void *operator new( unsigned int x, char const *file, unsigned int line )
 {
   return pvPortMalloc( x );
 }
-#endif /* !WIN32 && !WIN64 */
 
 extern "C"
 {
+  /*-------------------------------------------------------------------------------
+  Jumping Hooks
+  -------------------------------------------------------------------------------*/
   static int PlatformSpecificSetJmpImplementation( void ( *function )( void *data ), void *data )
   {
     if ( 0 == setjmp( test_exit_jmp_buf[ jmp_buf_index ] ) )
@@ -105,17 +116,13 @@ extern "C"
   void ( *PlatformSpecificRestoreJumpBuffer )()                   = PlatformSpecificRestoreJumpBufferImplementation;
 
 
-  ///////////// Time in millis
-  /*
-   *  In Keil MDK-ARM, clock() default implementation used semihosting.
-   *  Resolutions is user adjustable (1 ms for now)
-   */
+  /*-------------------------------------------------------------------------------
+  Timing Hooks
+  -------------------------------------------------------------------------------*/
   static long TimeInMillisImplementation()
   {
-    return 0;
+    return Chimera::millis();
   }
-
-  ///////////// Time in String
 
   static const char *DummyTimeStringImplementation()
   {
@@ -126,8 +133,16 @@ extern "C"
   long ( *GetPlatformSpecificTimeInMillis )()      = TimeInMillisImplementation;
   const char *( *GetPlatformSpecificTimeString )() = DummyTimeStringImplementation;
 
+
+  /*-------------------------------------------------------------------------------
+  Character Manipulation Hooks
+  -------------------------------------------------------------------------------*/
   int ( *PlatformSpecificVSNprintf )( char *str, size_t size, const char *format, va_list args ) = vsnprintf;
 
+
+  /*-------------------------------------------------------------------------------
+  File Operation Hooks
+  -------------------------------------------------------------------------------*/
   static PlatformSpecificFile PlatformSpecificFOpenImplementation( const char *filename, const char *flag )
   {
     return nullptr;
@@ -200,27 +215,23 @@ extern "C"
   /*-------------------------------------------------------------------------------
   Memory Stubs
   -------------------------------------------------------------------------------*/
-  static volatile size_t memAllocated = 0;
-  static volatile size_t memReallocated = 0;
-
   static void *PlatformSpecificMallocImplementation( size_t size )
   {
-    memAllocated += size;
     return pvPortMalloc( size );
   }
 
-  static void *PlatformSpecificReallocImplementation( void *mem, size_t size)
+
+  static void *PlatformSpecificReallocImplementation( void *mem, size_t size )
   {
-    memReallocated += size;
     vPortFree( mem );
     return pvPortMalloc( size );
   }
+
 
   static void PlatformSpecificFreeImplementation( void *mem )
   {
     vPortFree( mem );
   }
-
 
   void *( *PlatformSpecificMalloc )( size_t size )                  = PlatformSpecificMallocImplementation;
   void *( *PlatformSpecificRealloc )( void *, size_t )              = PlatformSpecificReallocImplementation;
@@ -229,8 +240,9 @@ extern "C"
   void *( *PlatformSpecificMemset )( void *, int, size_t )          = memset;
 
 
-
-
+  /*-------------------------------------------------------------------------------
+  Math Operation Hooks
+  -------------------------------------------------------------------------------*/
   static int IsNanImplementation( double d )
   {
     return isnan( d );
@@ -248,12 +260,12 @@ extern "C"
 
   static void SrandImplementation( unsigned int x )
   {
-
+    srand( x );
   }
 
   static int RandImplementation()
   {
-    return 1;
+    return rand();
   }
 
   double ( *PlatformSpecificFabs )( double )                = fabs;
@@ -264,6 +276,9 @@ extern "C"
   int ( *PlatformSpecificRand )( void )                     = RandImplementation;
 
 
+  /*-------------------------------------------------------------------------------
+  Threading Operation Hooks
+  -------------------------------------------------------------------------------*/
   static PlatformSpecificMutex DummyMutexCreate( void )
   {
     return 0;
@@ -286,4 +301,4 @@ extern "C"
   void ( *PlatformSpecificMutexUnlock )( PlatformSpecificMutex )  = DummyMutexUnlock;
   void ( *PlatformSpecificMutexDestroy )( PlatformSpecificMutex ) = DummyMutexDestroy;
 
-}    // extern C
+}  // extern C
