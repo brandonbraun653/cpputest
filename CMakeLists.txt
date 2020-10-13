@@ -27,7 +27,16 @@ else()
 endif()
 
 target_include_directories(CppUTest PUBLIC include)
-target_link_libraries(CppUTest PRIVATE prj_device_target freertos_inc freertos_port freertos_cfg chimera_inc aurora_inc Boost::boost)
+target_link_libraries(CppUTest PRIVATE
+  prj_device_target
+  prj_build_target_rel
+  freertos_inc
+  freertos_port
+  freertos_cfg
+  chimera_inc
+  aurora_inc
+  Boost::boost
+  )
 target_compile_definitions(CppUTest PUBLIC
   CPPUTEST_MEM_LEAK_DETECTION_DISABLED  # Requires exceptions to enable
   CPPUTEST_STD_CPP_LIB_DISABLED         # Requires exceptions to enable
