@@ -23,7 +23,7 @@ add_library(CppUTest STATIC
 if(NOT CPP_PLATFORM)
   message(FATAL_ERROR "Using CppUTest requires definition of CPP_PLATFORM")
 else()
-  target_sources(CppUTest PRIVATE platforms/${CPP_PLATFORM}/UtestPlatform.cpp)
+  target_sources(CppUTest PRIVATE ${COMMON_TOOL_ROOT}/cpputest/platforms/${CPP_PLATFORM}/UTestPlatform.cpp)
 endif()
 
 target_include_directories(CppUTest PUBLIC include)
