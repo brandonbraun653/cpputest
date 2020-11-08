@@ -30,21 +30,20 @@
 
 TestOutput::WorkingEnvironment TestOutput::workingEnvironment_ = TestOutput::detectEnvironment;
 
-void TestOutput::setWorkingEnvironment(TestOutput::WorkingEnvironment workEnvironment)
+void TestOutput::setWorkingEnvironment( TestOutput::WorkingEnvironment workEnvironment )
 {
-    workingEnvironment_ = workEnvironment;
+  workingEnvironment_ = workEnvironment;
 }
 
 TestOutput::WorkingEnvironment TestOutput::getWorkingEnvironment()
 {
-    if (workingEnvironment_ == TestOutput::detectEnvironment)
-        return PlatformSpecificGetWorkingEnvironment();
-    return workingEnvironment_;
+  if ( workingEnvironment_ == TestOutput::detectEnvironment )
+    return PlatformSpecificGetWorkingEnvironment();
+  return workingEnvironment_;
 }
 
 
-TestOutput::TestOutput() :
-    dotCount_(0), verbose_(level_quiet), color_(false), progressIndication_(".")
+TestOutput::TestOutput() : dotCount_( 0 ), verbose_( level_quiet ), color_( false ), progressIndication_( "." )
 {
 }
 
@@ -52,246 +51,261 @@ TestOutput::~TestOutput()
 {
 }
 
-void TestOutput::verbose(VerbosityLevel level)
+void TestOutput::verbose( VerbosityLevel level )
 {
-    verbose_ = level;
+  verbose_ = level;
 }
 
 void TestOutput::color()
 {
-    color_ = true;
+  color_ = true;
 }
 
-void TestOutput::print(const char* str)
+void TestOutput::print( const char *str )
 {
-    printBuffer(str);
+  printBuffer( str );
 }
 
-void TestOutput::print(long n)
+void TestOutput::print( long n )
 {
-    print(StringFrom(n).asCharString());
+  print( StringFrom( n ).asCharString() );
 }
 
-void TestOutput::print(size_t n)
+void TestOutput::print( size_t n )
 {
-    print(StringFrom(n).asCharString());
+  print( StringFrom( n ).asCharString() );
 }
 
-void TestOutput::printDouble(double d)
+void TestOutput::printDouble( double d )
 {
-    print(StringFrom(d).asCharString());
+  print( StringFrom( d ).asCharString() );
 }
 
-TestOutput& operator<<(TestOutput& p, const char* s)
+TestOutput &operator<<( TestOutput &p, const char *s )
 {
-    p.print(s);
-    return p;
+  p.print( s );
+  return p;
 }
 
-TestOutput& operator<<(TestOutput& p, long int i)
+TestOutput &operator<<( TestOutput &p, long int i )
 {
-    p.print(i);
-    return p;
+  p.print( i );
+  return p;
 }
 
-void TestOutput::printCurrentTestStarted(const UtestShell& test)
+void TestOutput::printCurrentTestStarted( const UtestShell &test )
 {
-    if (verbose_ > level_quiet) print(test.getFormattedName().asCharString());
+  if ( verbose_ > level_quiet )
+    print( test.getFormattedName().asCharString() );
 
-    if (test.willRun()) {
-       setProgressIndicator(".");
-    }
-    else {
-       setProgressIndicator("!");
-    }
+  if ( test.willRun() )
+  {
+    setProgressIndicator( "." );
+  }
+  else
+  {
+    setProgressIndicator( "!" );
+  }
 }
 
-void TestOutput::printCurrentTestEnded(const TestResult& res)
+void TestOutput::printCurrentTestEnded( const TestResult &res )
 {
-    if (verbose_ > level_quiet) {
-        print(" - ");
-        print(res.getCurrentTestTotalExecutionTime());
-        print(" ms\n");
-    }
-    else {
-        printProgressIndicator();
-    }
+  if ( verbose_ > level_quiet )
+  {
+    print( " - " );
+    print( res.getCurrentTestTotalExecutionTime() );
+    print( " ms\r\n" );
+  }
+  else
+  {
+    printProgressIndicator();
+  }
 }
 
 void TestOutput::printProgressIndicator()
 {
-    print(progressIndication_);
-    if (++dotCount_ % 50 == 0) print("\n");
+  print( progressIndication_ );
+  if ( ++dotCount_ % 50 == 0 )
+    print( "\r\n" );
 }
 
-void TestOutput::setProgressIndicator(const char* indicator)
+void TestOutput::setProgressIndicator( const char *indicator )
 {
-    progressIndication_ = indicator;
+  progressIndication_ = indicator;
 }
 
 void TestOutput::printTestsStarted()
 {
 }
 
-void TestOutput::printCurrentGroupStarted(const UtestShell& /*test*/)
+void TestOutput::printCurrentGroupStarted( const UtestShell & /*test*/ )
 {
 }
 
-void TestOutput::printCurrentGroupEnded(const TestResult& /*res*/)
+void TestOutput::printCurrentGroupEnded( const TestResult & /*res*/ )
 {
 }
 
-void TestOutput::printTestsEnded(const TestResult& result)
+void TestOutput::printTestsEnded( const TestResult &result )
 {
-    print("\n");
-    const bool isFailure = result.isFailure();
-    const size_t failureCount = result.getFailureCount();
-    if (isFailure) {
-        if (color_) {
-            print("\033[31;1m");
-        }
-        print("Errors (");
-        if (failureCount > 0) {
-            print(failureCount);
-            print(" failures, ");
-        }
-        else {
-            print("ran nothing, ");
-        }
+  print( "\r\n" );
+  const bool isFailure      = result.isFailure();
+  const size_t failureCount = result.getFailureCount();
+  if ( isFailure )
+  {
+    if ( color_ )
+    {
+      print( "\033[31;1m" );
     }
-    else {
-        if (color_) {
-            print("\033[32;1m");
-        }
-        print("OK (");
+    print( "Errors (" );
+    if ( failureCount > 0 )
+    {
+      print( failureCount );
+      print( " failures, " );
     }
-    print(result.getTestCount());
-    print(" tests, ");
-    print(result.getRunCount());
-    print(" ran, ");
-    print(result.getCheckCount());
-    print(" checks, ");
-    print(result.getIgnoredCount());
-    print(" ignored, ");
-    print(result.getFilteredOutCount());
-    print(" filtered out, ");
-    print(result.getTotalExecutionTime());
-    print(" ms)");
-    if (color_) {
-        print("\033[m");
-    }
-    if (isFailure && failureCount == 0) {
-        print("\nNote: test run failed because no tests were run or ignored. Assuming something went wrong. "
-              "This often happens because of linking errors or typos in test filter.");
-    }
-    print("\n\n");
-
-    dotCount_ = 0;
-}
-
-void TestOutput::printTestRun(size_t number, size_t total)
-{
-    if (total > 1) {
-        print("Test run ");
-        print(number);
-        print(" of ");
-        print(total);
-        print("\n");
-    }
-}
-
-void TestOutput::printFailure(const TestFailure& failure)
-{
-    if (failure.isOutsideTestFile() || failure.isInHelperFunction())
-        printFileAndLineForTestAndFailure(failure);
     else
-        printFileAndLineForFailure(failure);
-
-    printFailureMessage(failure.getMessage());
-}
-
-void TestOutput::printFileAndLineForTestAndFailure(const TestFailure& failure)
-{
-    printErrorInFileOnLineFormattedForWorkingEnvironment(failure.getTestFileName(), failure.getTestLineNumber());
-    printFailureInTest(failure.getTestName());
-    printErrorInFileOnLineFormattedForWorkingEnvironment(failure.getFileName(), failure.getFailureLineNumber());
-}
-
-void TestOutput::printFileAndLineForFailure(const TestFailure& failure)
-{
-    printErrorInFileOnLineFormattedForWorkingEnvironment(failure.getFileName(), failure.getFailureLineNumber());
-    printFailureInTest(failure.getTestName());
-}
-
-void TestOutput::printFailureInTest(SimpleString testName)
-{
-    print(" Failure in ");
-    print(testName.asCharString());
-}
-
-void TestOutput::printFailureMessage(SimpleString reason)
-{
-    print("\n");
-    print("\t");
-    print(reason.asCharString());
-    print("\n\n");
-}
-
-void TestOutput::printErrorInFileOnLineFormattedForWorkingEnvironment(SimpleString file, size_t lineNumber)
-{
-    if (TestOutput::getWorkingEnvironment() == TestOutput::visualStudio)
-        printVisualStudioErrorInFileOnLine(file, lineNumber);
-    else
-        printEclipseErrorInFileOnLine(file, lineNumber);
-}
-
-void TestOutput::printEclipseErrorInFileOnLine(SimpleString file, size_t lineNumber)
-{
-    print("\n");
-    print(file.asCharString());
-    print(":");
-    print(lineNumber);
-    print(":");
-    print(" error:");
-}
-
-void TestOutput::printVisualStudioErrorInFileOnLine(SimpleString file, size_t lineNumber)
-{
-    print("\n");
-    print(file.asCharString());
-    print("(");
-    print(lineNumber);
-    print("):");
-    print(" error:");
-}
-
-void TestOutput::printVeryVerbose(const char* str)
-{
-    if(verbose_ == level_veryVerbose)
-        printBuffer(str);
-}
-
-
-void ConsoleTestOutput::printBuffer(const char* s)
-{
-    while (*s) {
-        PlatformSpecificPutchar(*s);
-        s++;
+    {
+      print( "ran nothing, " );
     }
-    flush();
+  }
+  else
+  {
+    if ( color_ )
+    {
+      print( "\033[32;1m" );
+    }
+    print( "OK (" );
+  }
+  print( result.getTestCount() );
+  print( " tests, " );
+  print( result.getRunCount() );
+  print( " ran, " );
+  print( result.getCheckCount() );
+  print( " checks, " );
+  print( result.getIgnoredCount() );
+  print( " ignored, " );
+  print( result.getFilteredOutCount() );
+  print( " filtered out, " );
+  print( result.getTotalExecutionTime() );
+  print( " ms)" );
+  if ( color_ )
+  {
+    print( "\033[m" );
+  }
+  if ( isFailure && failureCount == 0 )
+  {
+    print( "\r\nNote: test run failed because no tests were run or ignored. Assuming something went wrong. "
+           "This often happens because of linking errors or typos in test filter." );
+  }
+  print( "\r\n\r\n" );
+
+  dotCount_ = 0;
+}
+
+void TestOutput::printTestRun( size_t number, size_t total )
+{
+  if ( total > 1 )
+  {
+    print( "Test run " );
+    print( number );
+    print( " of " );
+    print( total );
+    print( "\r\n" );
+  }
+}
+
+void TestOutput::printFailure( const TestFailure &failure )
+{
+  if ( failure.isOutsideTestFile() || failure.isInHelperFunction() )
+    printFileAndLineForTestAndFailure( failure );
+  else
+    printFileAndLineForFailure( failure );
+
+  printFailureMessage( failure.getMessage() );
+}
+
+void TestOutput::printFileAndLineForTestAndFailure( const TestFailure &failure )
+{
+  printErrorInFileOnLineFormattedForWorkingEnvironment( failure.getTestFileName(), failure.getTestLineNumber() );
+  printFailureInTest( failure.getTestName() );
+  printErrorInFileOnLineFormattedForWorkingEnvironment( failure.getFileName(), failure.getFailureLineNumber() );
+}
+
+void TestOutput::printFileAndLineForFailure( const TestFailure &failure )
+{
+  printErrorInFileOnLineFormattedForWorkingEnvironment( failure.getFileName(), failure.getFailureLineNumber() );
+  printFailureInTest( failure.getTestName() );
+}
+
+void TestOutput::printFailureInTest( SimpleString testName )
+{
+  print( " Failure in " );
+  print( testName.asCharString() );
+}
+
+void TestOutput::printFailureMessage( SimpleString reason )
+{
+  print( "\r\n" );
+  print( "\t" );
+  print( reason.asCharString() );
+  print( "\r\n\r\n" );
+}
+
+void TestOutput::printErrorInFileOnLineFormattedForWorkingEnvironment( SimpleString file, size_t lineNumber )
+{
+  if ( TestOutput::getWorkingEnvironment() == TestOutput::visualStudio )
+    printVisualStudioErrorInFileOnLine( file, lineNumber );
+  else
+    printEclipseErrorInFileOnLine( file, lineNumber );
+}
+
+void TestOutput::printEclipseErrorInFileOnLine( SimpleString file, size_t lineNumber )
+{
+  print( "\r\n" );
+  print( file.asCharString() );
+  print( ":" );
+  print( lineNumber );
+  print( ":" );
+  print( " error:" );
+}
+
+void TestOutput::printVisualStudioErrorInFileOnLine( SimpleString file, size_t lineNumber )
+{
+  print( "\r\n" );
+  print( file.asCharString() );
+  print( "(" );
+  print( lineNumber );
+  print( "):" );
+  print( " error:" );
+}
+
+void TestOutput::printVeryVerbose( const char *str )
+{
+  if ( verbose_ == level_veryVerbose )
+    printBuffer( str );
+}
+
+
+void ConsoleTestOutput::printBuffer( const char *s )
+{
+  while ( *s )
+  {
+    PlatformSpecificPutchar( *s );
+    s++;
+  }
+  flush();
 }
 
 void ConsoleTestOutput::flush()
 {
-    PlatformSpecificFlush();
+  PlatformSpecificFlush();
 }
 
 StringBufferTestOutput::~StringBufferTestOutput()
 {
 }
 
-CompositeTestOutput::CompositeTestOutput()
-  : outputOne_(NULLPTR), outputTwo_(NULLPTR)
+CompositeTestOutput::CompositeTestOutput() : outputOne_( NULLPTR ), outputTwo_( NULLPTR )
 {
 }
 
@@ -301,13 +315,13 @@ CompositeTestOutput::~CompositeTestOutput()
   delete outputTwo_;
 }
 
-void CompositeTestOutput::setOutputOne(TestOutput* output)
+void CompositeTestOutput::setOutputOne( TestOutput *output )
 {
   delete outputOne_;
   outputOne_ = output;
 }
 
-void CompositeTestOutput::setOutputTwo(TestOutput* output)
+void CompositeTestOutput::setOutputTwo( TestOutput *output )
 {
   delete outputTwo_;
   outputTwo_ = output;
@@ -315,97 +329,128 @@ void CompositeTestOutput::setOutputTwo(TestOutput* output)
 
 void CompositeTestOutput::printTestsStarted()
 {
-  if (outputOne_) outputOne_->printTestsStarted();
-  if (outputTwo_) outputTwo_->printTestsStarted();
+  if ( outputOne_ )
+    outputOne_->printTestsStarted();
+  if ( outputTwo_ )
+    outputTwo_->printTestsStarted();
 }
 
-void CompositeTestOutput::printTestsEnded(const TestResult& result)
+void CompositeTestOutput::printTestsEnded( const TestResult &result )
 {
-  if (outputOne_) outputOne_->printTestsEnded(result);
-  if (outputTwo_) outputTwo_->printTestsEnded(result);
+  if ( outputOne_ )
+    outputOne_->printTestsEnded( result );
+  if ( outputTwo_ )
+    outputTwo_->printTestsEnded( result );
 }
 
-void CompositeTestOutput::printCurrentTestStarted(const UtestShell& test)
+void CompositeTestOutput::printCurrentTestStarted( const UtestShell &test )
 {
-  if (outputOne_) outputOne_->printCurrentTestStarted(test);
-  if (outputTwo_) outputTwo_->printCurrentTestStarted(test);
+  if ( outputOne_ )
+    outputOne_->printCurrentTestStarted( test );
+  if ( outputTwo_ )
+    outputTwo_->printCurrentTestStarted( test );
 }
 
-void CompositeTestOutput::printCurrentTestEnded(const TestResult& res)
+void CompositeTestOutput::printCurrentTestEnded( const TestResult &res )
 {
-  if (outputOne_) outputOne_->printCurrentTestEnded(res);
-  if (outputTwo_) outputTwo_->printCurrentTestEnded(res);
+  if ( outputOne_ )
+    outputOne_->printCurrentTestEnded( res );
+  if ( outputTwo_ )
+    outputTwo_->printCurrentTestEnded( res );
 }
 
-void CompositeTestOutput::printCurrentGroupStarted(const UtestShell& test)
+void CompositeTestOutput::printCurrentGroupStarted( const UtestShell &test )
 {
-  if (outputOne_) outputOne_->printCurrentGroupStarted(test);
-  if (outputTwo_) outputTwo_->printCurrentGroupStarted(test);
+  if ( outputOne_ )
+    outputOne_->printCurrentGroupStarted( test );
+  if ( outputTwo_ )
+    outputTwo_->printCurrentGroupStarted( test );
 }
 
-void CompositeTestOutput::printCurrentGroupEnded(const TestResult& res)
+void CompositeTestOutput::printCurrentGroupEnded( const TestResult &res )
 {
-  if (outputOne_) outputOne_->printCurrentGroupEnded(res);
-  if (outputTwo_) outputTwo_->printCurrentGroupEnded(res);
+  if ( outputOne_ )
+    outputOne_->printCurrentGroupEnded( res );
+  if ( outputTwo_ )
+    outputTwo_->printCurrentGroupEnded( res );
 }
 
-void CompositeTestOutput::verbose(VerbosityLevel level)
+void CompositeTestOutput::verbose( VerbosityLevel level )
 {
-  if (outputOne_) outputOne_->verbose(level);
-  if (outputTwo_) outputTwo_->verbose(level);
+  if ( outputOne_ )
+    outputOne_->verbose( level );
+  if ( outputTwo_ )
+    outputTwo_->verbose( level );
 }
 
 void CompositeTestOutput::color()
 {
-  if (outputOne_) outputOne_->color();
-  if (outputTwo_) outputTwo_->color();
+  if ( outputOne_ )
+    outputOne_->color();
+  if ( outputTwo_ )
+    outputTwo_->color();
 }
 
-void CompositeTestOutput::printBuffer(const char* buffer)
+void CompositeTestOutput::printBuffer( const char *buffer )
 {
-  if (outputOne_) outputOne_->printBuffer(buffer);
-  if (outputTwo_) outputTwo_->printBuffer(buffer);
+  if ( outputOne_ )
+    outputOne_->printBuffer( buffer );
+  if ( outputTwo_ )
+    outputTwo_->printBuffer( buffer );
 }
 
-void CompositeTestOutput::print(const char* buffer)
+void CompositeTestOutput::print( const char *buffer )
 {
-  if (outputOne_) outputOne_->print(buffer);
-  if (outputTwo_) outputTwo_->print(buffer);
+  if ( outputOne_ )
+    outputOne_->print( buffer );
+  if ( outputTwo_ )
+    outputTwo_->print( buffer );
 }
 
-void CompositeTestOutput::print(long number)
+void CompositeTestOutput::print( long number )
 {
-  if (outputOne_) outputOne_->print(number);
-  if (outputTwo_) outputTwo_->print(number);
+  if ( outputOne_ )
+    outputOne_->print( number );
+  if ( outputTwo_ )
+    outputTwo_->print( number );
 }
 
-void CompositeTestOutput::print(size_t number)
+void CompositeTestOutput::print( size_t number )
 {
-  if (outputOne_) outputOne_->print(number);
-  if (outputTwo_) outputTwo_->print(number);
+  if ( outputOne_ )
+    outputOne_->print( number );
+  if ( outputTwo_ )
+    outputTwo_->print( number );
 }
 
-void CompositeTestOutput::printDouble(double number)
+void CompositeTestOutput::printDouble( double number )
 {
-  if (outputOne_) outputOne_->printDouble(number);
-  if (outputTwo_) outputTwo_->printDouble(number);
+  if ( outputOne_ )
+    outputOne_->printDouble( number );
+  if ( outputTwo_ )
+    outputTwo_->printDouble( number );
 }
 
-void CompositeTestOutput::printFailure(const TestFailure& failure)
+void CompositeTestOutput::printFailure( const TestFailure &failure )
 {
-  if (outputOne_) outputOne_->printFailure(failure);
-  if (outputTwo_) outputTwo_->printFailure(failure);
+  if ( outputOne_ )
+    outputOne_->printFailure( failure );
+  if ( outputTwo_ )
+    outputTwo_->printFailure( failure );
 }
 
-void CompositeTestOutput::setProgressIndicator(const char* indicator)
+void CompositeTestOutput::setProgressIndicator( const char *indicator )
 {
-  if (outputOne_) outputOne_->setProgressIndicator(indicator);
-  if (outputTwo_) outputTwo_->setProgressIndicator(indicator);
+  if ( outputOne_ )
+    outputOne_->setProgressIndicator( indicator );
+  if ( outputTwo_ )
+    outputTwo_->setProgressIndicator( indicator );
 }
 
 void CompositeTestOutput::flush()
 {
-  if (outputOne_) outputOne_->flush();
-  if (outputTwo_) outputTwo_->flush();
+  if ( outputOne_ )
+    outputOne_->flush();
+  if ( outputTwo_ )
+    outputTwo_->flush();
 }
-
