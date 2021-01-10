@@ -33,8 +33,8 @@ target_link_libraries(CppUTest PRIVATE
   freertos_inc
   freertos_port
   freertos_cfg
-  chimera_inc
-  aurora_inc
+  chimera_intf_inc
+  aurora_intf_inc
   Boost::boost
   )
 target_compile_definitions(CppUTest PUBLIC
