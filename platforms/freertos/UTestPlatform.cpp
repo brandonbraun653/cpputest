@@ -198,7 +198,7 @@ extern "C"
     -------------------------------------------------*/
     serial->lock();
     serial->write( ostreamBuff.data(), ostreamBuffIdx );
-    serial->await( Chimera::Event::Trigger::TRIGGER_WRITE_COMPLETE, Chimera::Threading::TIMEOUT_BLOCK );
+    serial->await( Chimera::Event::Trigger::TRIGGER_WRITE_COMPLETE, Chimera::Thread::TIMEOUT_BLOCK );
     serial->unlock();
 
     /*-------------------------------------------------
