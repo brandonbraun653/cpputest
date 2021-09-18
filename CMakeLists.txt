@@ -20,22 +20,16 @@ add_library(CppUTest STATIC
   src/CppUTest/Utest.cpp
 )
 
-if(NOT CPP_PLATFORM)
-  message(FATAL_ERROR "Using CppUTest requires definition of CPP_PLATFORM")
-else()
+if(CPP_PLATFORM)
   target_sources(CppUTest PRIVATE ${COMMON_TOOL_ROOT}/cpputest/platforms/${CPP_PLATFORM}/UTestPlatform.cpp)
+else()
+  target_sources(CppUTest PRIVATE ${COMMON_TOOL_ROOT}/cpputest/platforms/gcc/UTestPlatform.cpp)
 endif()
 
 target_include_directories(CppUTest PUBLIC include)
 target_link_libraries(CppUTest PRIVATE
   prj_device_target
   prj_build_target_rel
-  freertos_inc
-  freertos_port
-  freertos_cfg
-  chimera_intf_inc
-  aurora_intf_inc
-  Boost::boost
   )
 target_compile_definitions(CppUTest PUBLIC
   CPPUTEST_MEM_LEAK_DETECTION_DISABLED  # Requires exceptions to enable
