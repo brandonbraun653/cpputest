@@ -5,44 +5,50 @@
  *  Description:
  *    FreeRTOS platform base for running CppUTests on embedded hardware
  *
- *  2020 | Brandon Braun | brandonbraun653@gmail.com
+ *  2020-2023 | Brandon Braun | brandonbraun653@gmail.com
  *******************************************************************************/
 
-/* C Includes */
-#include <time.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <setjmp.h>
-#include <string.h>
+/*-----------------------------------------------------------------------------
+Includes
+-----------------------------------------------------------------------------*/
+#include <Chimera/common>
+#include <Chimera/serial>
+#include <FreeRTOS/FreeRTOS.h>
+#include <FreeRTOS/portable.h>
+#include <array>
 #include <ctype.h>
 #include <math.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#include <CppUTest/PlatformSpecificFunctions.h>
 #include <CppUTest/TestHarness.h>
+
+#if __has_include( "cpputest_config_prj.hpp" )
+#include "cpputest_config_prj.hpp"
+#endif
+
 #undef malloc
 #undef calloc
 #undef realloc
 #undef free
 
-/* STL Includes */
-#include <array>
-
-/* CppUTest Includes */
-#include <CppUTest/PlatformSpecificFunctions.h>
-
-/* Chimera Includes */
-#include <Chimera/common>
-#include <Chimera/serial>
-
-/* FreeRTOS Includes */
-#include <FreeRTOS/FreeRTOS.h>
-#include <FreeRTOS/portable.h>
+/*-----------------------------------------------------------------------------
+Literals
+-----------------------------------------------------------------------------*/
+#ifndef CPPUTEST_PLATFORM_SERIAL_CHANNEL
+#define CPPUTEST_PLATFORM_SERIAL_CHANNEL ( Chimera::Serial::Channel::SERIAL1 )
+#endif
 
 /*-------------------------------------------------------------------------------
 Static Data
 -------------------------------------------------------------------------------*/
 static jmp_buf test_exit_jmp_buf[ 10 ];
 static int jmp_buf_index = 0;
-
 
 /*-------------------------------------------------------------------------------
 Process Hooks
@@ -170,19 +176,18 @@ extern "C"
 
   static int PlatformSpecificPutCharImplementation( int x )
   {
-    /*-------------------------------------------------
-    Reset the buffer if we try to write into or past
-    the null terminator.
-    -------------------------------------------------*/
+    /*-------------------------------------------------------------------------
+    Reset the buffer if we try to write into or past the null terminator.
+    -------------------------------------------------------------------------*/
     if ( ostreamBuffIdx >= ( ostreamBuff.size() - 1 ) )
     {
       ostreamBuff.fill( 0 );
       ostreamBuffIdx = 0;
     }
 
-    /*-------------------------------------------------
+    /*-------------------------------------------------------------------------
     Store the new character
-    -------------------------------------------------*/
+    -------------------------------------------------------------------------*/
     ostreamBuff[ ostreamBuffIdx ] = static_cast<uint8_t>( x );
     ostreamBuffIdx++;
 
@@ -191,19 +196,19 @@ extern "C"
 
   static void PlatformSpecificFlushImplementation()
   {
-    auto serial = Chimera::Serial::getDriver( Chimera::Serial::Channel::SERIAL1 );
+    auto serial = Chimera::Serial::getDriver( CPPUTEST_PLATFORM_SERIAL_CHANNEL );
 
-    /*-------------------------------------------------
+    /*-------------------------------------------------------------------------
     Dump the data to the serial console
-    -------------------------------------------------*/
+    -------------------------------------------------------------------------*/
     serial->lock();
     serial->write( ostreamBuff.data(), ostreamBuffIdx );
     serial->await( Chimera::Event::Trigger::TRIGGER_WRITE_COMPLETE, Chimera::Thread::TIMEOUT_BLOCK );
     serial->unlock();
 
-    /*-------------------------------------------------
+    /*-------------------------------------------------------------------------
     Reset the buffer
-    -------------------------------------------------*/
+    -------------------------------------------------------------------------*/
     ostreamBuff.fill( 0 );
     ostreamBuffIdx = 0;
   }
