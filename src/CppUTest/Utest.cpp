@@ -30,6 +30,10 @@
 #include "CppUTest/PlatformSpecificFunctions.h"
 #include "CppUTest/TestOutput.h"
 
+#if defined(__GNUC__) && __GNUC__ >= 11
+# define NEEDS_DISABLE_NULL_WARNING
+#endif /* GCC >= 11 */
+
 bool doubles_equal(double d1, double d2, double threshold)
 {
     if (PlatformSpecificIsNan(d1) || PlatformSpecificIsNan(d2) || PlatformSpecificIsNan(threshold))
@@ -131,6 +135,13 @@ extern "C" {
 
 /******************************** */
 
+static const NormalTestTerminator normalTestTerminator;
+static const CrashingTestTerminator crashingTestTerminator;
+
+const TestTerminator *UtestShell::currentTestTerminator_ = &normalTestTerminator;
+
+/******************************** */
+
 UtestShell::UtestShell() :
     group_("UndefinedTestGroup"), name_("UndefinedTest"), file_("UndefinedFile"), lineNumber_(0), next_(NULLPTR), isRunAsSeperateProcess_(false), hasFailed_(false)
 {
@@ -151,10 +162,20 @@ UtestShell::~UtestShell()
 }
 
 // LCOV_EXCL_START - actually covered but not in .gcno due to race condition
+#ifdef NEEDS_DISABLE_NULL_WARNING
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wnonnull"
+#endif /* NEEDS_DISABLE_NULL_WARNING */
+
 static void defaultCrashMethod()
 {
-    UtestShell* ptr = (UtestShell*) NULLPTR; ptr->countTests();
+    UtestShell* ptr = (UtestShell*) NULLPTR;
+    ptr->countTests();
 }
+
+#ifdef NEEDS_DISABLE_NULL_WARNING
+# pragma GCC diagnostic pop
+#endif /* NEEDS_DISABLE_NULL_WARNING */
 // LCOV_EXCL_STOP
 
 static void (*pleaseCrashMeRightNow) () = defaultCrashMethod;
@@ -349,7 +370,7 @@ bool UtestShell::shouldRun(const TestFilter* groupFilters, const TestFilter* nam
 
 void UtestShell::failWith(const TestFailure& failure)
 {
-    failWith(failure, NormalTestTerminator());
+    failWith(failure, getCurrentTestTerminator());
 } // LCOV_EXCL_LINE
 
 void UtestShell::failWith(const TestFailure& failure, const TestTerminator& terminator)
@@ -575,6 +596,20 @@ UtestShell* UtestShell::getCurrent()
     return currentTest_;
 }
 
+const TestTerminator &UtestShell::getCurrentTestTerminator()
+{
+    return *currentTestTerminator_;
+}
+
+void UtestShell::setCrashOnFail()
+{
+    currentTestTerminator_ = &crashingTestTerminator;
+}
+
+void UtestShell::restoreDefaultTestTerminator()
+{
+    currentTestTerminator_ = &normalTestTerminator;
+}
 
 ExecFunctionTestShell::~ExecFunctionTestShell()
 {
@@ -673,6 +708,16 @@ void TestTerminatorWithoutExceptions::exitCurrentTest() const
 } // LCOV_EXCL_LINE
 
 TestTerminatorWithoutExceptions::~TestTerminatorWithoutExceptions()
+{
+}
+
+void CrashingTestTerminator::exitCurrentTest() const
+{
+    UtestShell::crash();
+    NormalTestTerminator::exitCurrentTest();
+}
+
+CrashingTestTerminator::~CrashingTestTerminator()
 {
 }
 

@@ -8,6 +8,7 @@ gen_intf_lib(
   INTF_DEFINES
     CPPUTEST_MEM_LEAK_DETECTION_DISABLED
     CPPUTEST_STD_CPP_LIB_DISABLED
+    CPPUTEST_LONG_LONG_DISABLED
   EXPORT_DIR
     "${PROJECT_BINARY_DIR}/CommonTools/CppUTest"
 )
@@ -35,10 +36,13 @@ gen_static_lib_variants(
     src/CppUTest/TestTestingFixture.cpp
     src/CppUTest/SimpleMutex.cpp
     src/CppUTest/Utest.cpp
+    platforms/freertos/UTestPlatform.cpp
   PUB_LIBRARIES
     CppUTest_inc
     prj_device_target
     prj_build_target
+    aurora_intf_inc
+    chimera_intf_inc
   EXPORT_DIR
     "${PROJECT_BINARY_DIR}/CommonTools/CppUTest"
 )
